@@ -10,9 +10,12 @@ const cloudflarePagesConfig = {
  * @type {import('@remix-run/dev/config').AppConfig}
  */
 const netlifyConfig = {
-  serverBuildTarget: 'netlify',
-  server: './server-netlify.js',
-  ignoredRouteFiles: ['**/.*'],
+  appDirectory: 'app',
+  assetsBuildDirectory: 'public/build',
+  publicPath: '/build/',
+  serverBuildDirectory: 'build',
+  devServerPort: 8002,
+  ignoredRouteFiles: ['.*'],
 };
 /**
  * @type {import('@remix-run/dev/config').AppConfig}
@@ -26,9 +29,20 @@ const devConfig = {
   ignoredRouteFiles: ['.*'],
 };
 
+const prodConfig = {
+  appDirectory: './app',
+  assetsBuildDirectory: './public/build',
+  publicPath: './build/',
+  serverBuildDirectory: './build',
+  devServerPort: 8002,
+  ignoredRouteFiles: ['.*'],
+};
+
+// module.exports = process.env.NODE_ENV === "production" ? prodConfig : devConfig
+
 module.exports =
-  process.env.NODE_ENV === 'development'
-    ? devConfig
-    : process.env.CF_PAGES
-    ? cloudflarePagesConfig
-    : netlifyConfig;
+    process.env.NODE_ENV === 'development'
+        ? devConfig
+        : process.env.CF_PAGES
+            ? cloudflarePagesConfig
+            : netlifyConfig;
