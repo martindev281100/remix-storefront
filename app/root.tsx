@@ -24,6 +24,8 @@ import { getActiveCustomer } from '~/providers/customer/customer';
 import Footer from '~/components/footer/Footer';
 import { useActiveOrder } from '~/utils/use-active-order';
 import { setApiUrl } from '~/graphqlWrapper';
+import {PayPalScriptProvider} from "@paypal/react-paypal-js";
+import {PayPalScriptOptions} from "@paypal/paypal-js";
 
 export const meta: MetaFunction = () => {
   return { title: APP_META_TITLE, description: APP_META_DESCRIPTION };
@@ -100,6 +102,13 @@ export default function App() {
     refresh();
   }, [loaderData]);
 
+  const paypalConfig:  PayPalScriptOptions = {
+    "client-id": "YOUR-CLIENT-ID-HERE",
+    currency: "USD",
+    intent: "capture",
+  }
+
+
   return (
     <html lang="en" id="app">
       <head>
@@ -115,6 +124,8 @@ export default function App() {
           cartQuantity={activeOrder?.totalQuantity ?? 0}
         />
         <main className="">
+          <PayPalScriptProvider options={paypalConfig}>
+
           <Outlet
             context={{
               activeOrderFetcher,
@@ -123,6 +134,8 @@ export default function App() {
               removeItem,
             }}
           />
+          </PayPalScriptProvider>
+
         </main>
         <CartTray
           open={open}

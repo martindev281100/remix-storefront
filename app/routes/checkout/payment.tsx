@@ -16,6 +16,7 @@ import { StripePayments } from '~/components/checkout/stripe/StripePayments';
 import { DummyPayments } from '~/components/checkout/DummyPayments';
 import { BraintreeDropIn } from '~/components/checkout/braintree/BraintreePayments';
 import { getActiveOrder } from '~/providers/orders/order';
+import CheckoutPaypal from "~/components/checkout/paypal/CheckoutForm";
 
 export async function loader({ params, request }: DataFunctionArgs) {
   const session = await sessionStorage.getSession(
@@ -176,6 +177,10 @@ export default function CheckoutPayment() {
           </div>
         ),
       )}
+
+      <div className="py-12" key={"pp"}>
+        <CheckoutPaypal />
+      </div>
     </div>
   );
 }
