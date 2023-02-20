@@ -17,6 +17,9 @@ export function getEligiblePaymentMethods(options: QueryOptions) {
 export function generateBraintreeClientToken(options: QueryOptions) {
   return sdk.generateBraintreeClientToken({}, options);
 }
+export function generatePaypalClientToken(options: QueryOptions) {
+  return sdk.generatePaypalClientToken({}, options);
+}
 
 export function createStripePaymentIntent(options: QueryOptions) {
   return sdk.createStripePaymentIntent({}, options);
@@ -109,5 +112,10 @@ gql`
 gql`
   query generateBraintreeClientToken {
     generateBraintreeClientToken
+  }
+`;
+gql`
+  query generatePaypalClientToken {
+    generatePaypalClientToken
   }
 `;

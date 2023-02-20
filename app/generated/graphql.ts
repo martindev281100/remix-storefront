@@ -2444,6 +2444,17 @@ export type PriceRange = {
   min: Scalars['Int'];
 };
 
+export type PriceRangeBucket = {
+  __typename?: 'PriceRangeBucket';
+  count: Scalars['Int'];
+  to: Scalars['Int'];
+};
+
+export type PriceRangeInput = {
+  max: Scalars['Int'];
+  min: Scalars['Int'];
+};
+
 export type Product = Node & {
   __typename?: 'Product';
   assets: Array<Asset>;
@@ -2691,7 +2702,8 @@ export type Query = {
   facet?: Maybe<Facet>;
   /** A list of Facets available to the shop */
   facets: FacetList;
-  generateBraintreeClientToken?: Maybe<Scalars['String']>;
+  generateBraintreeClientToken: Scalars['String'];
+  generatePaypalClientToken: Scalars['String'];
   /** Returns information about the current authenticated User */
   me?: Maybe<CurrentUser>;
   /** Returns the possible next states that the activeOrder can transition to */
@@ -2735,6 +2747,18 @@ export type QueryFacetArgs = {
 
 export type QueryFacetsArgs = {
   options?: InputMaybe<FacetListOptions>;
+};
+
+
+export type QueryGenerateBraintreeClientTokenArgs = {
+  includeCustomerId?: InputMaybe<Scalars['Boolean']>;
+  orderId?: InputMaybe<Scalars['ID']>;
+};
+
+
+export type QueryGeneratePaypalClientTokenArgs = {
+  includeCustomerId?: InputMaybe<Scalars['Boolean']>;
+  orderId?: InputMaybe<Scalars['ID']>;
 };
 
 
@@ -2841,6 +2865,9 @@ export type SearchInput = {
   facetValueIds?: InputMaybe<Array<Scalars['ID']>>;
   facetValueOperator?: InputMaybe<LogicalOperator>;
   groupByProduct?: InputMaybe<Scalars['Boolean']>;
+  inStock?: InputMaybe<Scalars['Boolean']>;
+  priceRange?: InputMaybe<PriceRangeInput>;
+  priceRangeWithTax?: InputMaybe<PriceRangeInput>;
   skip?: InputMaybe<Scalars['Int']>;
   sort?: InputMaybe<SearchResultSortParameter>;
   take?: InputMaybe<Scalars['Int']>;
@@ -2854,22 +2881,19 @@ export type SearchReindexResponse = {
 
 export type SearchResponse = {
   __typename?: 'SearchResponse';
-  cacheIdentifier?: Maybe<SearchResponseCacheIdentifier>;
   collections: Array<CollectionResult>;
   facetValues: Array<FacetValueResult>;
   items: Array<SearchResult>;
+  prices: SearchResponsePriceData;
   totalItems: Scalars['Int'];
 };
 
-/**
- * This type is here to allow us to easily purge the Stellate cache
- * of any search results where the collectionSlug is used. We cannot rely on
- * simply purging the SearchResult type, because in the case of an empty 'items'
- * array, Stellate cannot know that that particular query now needs to be purged.
- */
-export type SearchResponseCacheIdentifier = {
-  __typename?: 'SearchResponseCacheIdentifier';
-  collectionSlug?: Maybe<Scalars['String']>;
+export type SearchResponsePriceData = {
+  __typename?: 'SearchResponsePriceData';
+  buckets: Array<PriceRangeBucket>;
+  bucketsWithTax: Array<PriceRangeBucket>;
+  range: PriceRange;
+  rangeWithTax: PriceRange;
 };
 
 export type SearchResult = {
@@ -2880,6 +2904,7 @@ export type SearchResult = {
   description: Scalars['String'];
   facetIds: Array<Scalars['ID']>;
   facetValueIds: Array<Scalars['ID']>;
+  inStock?: Maybe<Scalars['Boolean']>;
   price: SearchResultPrice;
   priceWithTax: SearchResultPrice;
   productAsset?: Maybe<SearchResultAsset>;
@@ -3280,7 +3305,12 @@ export type CreateStripePaymentIntentMutation = { __typename?: 'Mutation', creat
 export type GenerateBraintreeClientTokenQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type GenerateBraintreeClientTokenQuery = { __typename?: 'Query', generateBraintreeClientToken?: string | null };
+export type GenerateBraintreeClientTokenQuery = { __typename?: 'Query', generateBraintreeClientToken: string };
+
+export type GeneratePaypalClientTokenQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GeneratePaypalClientTokenQuery = { __typename?: 'Query', generatePaypalClientToken: string };
 
 export type CollectionsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -3694,6 +3724,11 @@ export const GenerateBraintreeClientTokenDocument = gql`
   generateBraintreeClientToken
 }
     `;
+export const GeneratePaypalClientTokenDocument = gql`
+    query generatePaypalClientToken {
+  generatePaypalClientToken
+}
+    `;
 export const CollectionsDocument = gql`
     query collections {
   collections {
@@ -3956,6 +3991,9 @@ export function getSdk<C, E>(requester: Requester<C, E>) {
     },
     generateBraintreeClientToken(variables?: GenerateBraintreeClientTokenQueryVariables, options?: C): Promise<GenerateBraintreeClientTokenQuery> {
       return requester<GenerateBraintreeClientTokenQuery, GenerateBraintreeClientTokenQueryVariables>(GenerateBraintreeClientTokenDocument, variables, options) as Promise<GenerateBraintreeClientTokenQuery>;
+    },
+    generatePaypalClientToken(variables?: GeneratePaypalClientTokenQueryVariables, options?: C): Promise<GeneratePaypalClientTokenQuery> {
+      return requester<GeneratePaypalClientTokenQuery, GeneratePaypalClientTokenQueryVariables>(GeneratePaypalClientTokenDocument, variables, options) as Promise<GeneratePaypalClientTokenQuery>;
     },
     collections(variables?: CollectionsQueryVariables, options?: C): Promise<CollectionsQuery> {
       return requester<CollectionsQuery, CollectionsQueryVariables>(CollectionsDocument, variables, options) as Promise<CollectionsQuery>;

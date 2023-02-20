@@ -5,7 +5,7 @@ import {
   createStripePaymentIntent,
   getEligiblePaymentMethods,
   getNextOrderStates,
-  transitionOrderToState,
+  transitionOrderToState, generatePaypalClientToken,
 } from '~/providers/checkout/checkout';
 import { Form, useLoaderData, useOutletContext } from '@remix-run/react';
 import { CreditCardIcon, XCircleIcon } from '@heroicons/react/24/solid';
@@ -17,24 +17,25 @@ import { DummyPayments } from '~/components/checkout/DummyPayments';
 import { BraintreeDropIn } from '~/components/checkout/braintree/BraintreePayments';
 import { getActiveOrder } from '~/providers/orders/order';
 import CheckoutPaypal from "~/components/checkout/paypal/CheckoutForm";
+import { Key } from 'react';
 
-export async function loader({ params, request }: DataFunctionArgs) {
+export async function loader({params, request}: DataFunctionArgs) {
   const session = await sessionStorage.getSession(
-    request?.headers.get('Cookie'),
+      request?.headers.get('Cookie'),
   );
-  const activeOrder = await getActiveOrder({ request });
+  const activeOrder = await getActiveOrder({request});
 
   //check if there is an active order if not redirect to homepage
   if (
-    !session ||
-    !activeOrder ||
-    !activeOrder.active ||
-    activeOrder.lines.length === 0
+      !session ||
+      !activeOrder ||
+      !activeOrder.active ||
+      activeOrder.lines.length === 0
   ) {
     return redirect('/');
   }
 
-  const { eligiblePaymentMethods } = await getEligiblePaymentMethods({
+  const {eligiblePaymentMethods} = await getEligiblePaymentMethods({
     request,
   });
   const error = session.get('activeOrderError');
@@ -47,24 +48,40 @@ export async function loader({ params, request }: DataFunctionArgs) {
         request,
       });
       stripePaymentIntent =
-        stripePaymentIntentResult.createStripePaymentIntent ?? undefined;
+          stripePaymentIntentResult.createStripePaymentIntent ?? undefined;
       stripePublishableKey = process.env.STRIPE_PUBLISHABLE_KEY;
     } catch (e: any) {
       stripeError = e.message;
     }
   }
 
+  let paypalKey: string | undefined;
+  let paypalError: string | undefined;
+  if (
+      eligiblePaymentMethods.find((method) => method.code.includes('paypal'))
+  ) {
+    try {
+      const generatePaypalTokenResult = await generatePaypalClientToken({
+        request,
+      });
+      paypalKey = generatePaypalTokenResult.generatePaypalClientToken ?? '';
+    } catch (e: any) {
+      paypalError = e.message;
+    }
+  }
+
+
   let brainTreeKey: string | undefined;
   let brainTreeError: string | undefined;
   if (
-    eligiblePaymentMethods.find((method) => method.code.includes('braintree'))
+      eligiblePaymentMethods.find((method) => method.code.includes('braintree'))
   ) {
     try {
       const generateBrainTreeTokenResult = await generateBraintreeClientToken({
         request,
       });
       brainTreeKey =
-        generateBrainTreeTokenResult.generateBraintreeClientToken ?? '';
+          generateBrainTreeTokenResult.generateBraintreeClientToken ?? '';
     } catch (e: any) {
       brainTreeError = e.message;
     }
@@ -76,22 +93,24 @@ export async function loader({ params, request }: DataFunctionArgs) {
     stripeError,
     brainTreeKey,
     brainTreeError,
+    paypalKey,
+    paypalError,
     error,
   };
 }
 
-export async function action({ params, request }: DataFunctionArgs) {
+export async function action({params, request}: DataFunctionArgs) {
   const body = await request.formData();
   const paymentMethodCode = body.get('paymentMethodCode');
   const paymentNonce = body.get('paymentNonce');
   if (typeof paymentMethodCode === 'string') {
-    const { nextOrderStates } = await getNextOrderStates({
+    const {nextOrderStates} = await getNextOrderStates({
       request,
     });
     if (nextOrderStates.includes('ArrangingPayment')) {
       const transitionResult = await transitionOrderToState(
-        'ArrangingPayment',
-        { request },
+          'ArrangingPayment',
+          {request},
       );
       if (transitionResult.transitionOrderToState?.__typename !== 'Order') {
         throw new Response('Not Found', {
@@ -102,12 +121,12 @@ export async function action({ params, request }: DataFunctionArgs) {
     }
 
     const result = await addPaymentToOrder(
-      { method: paymentMethodCode, metadata: { nonce: paymentNonce } },
-      { request },
+        {method: paymentMethodCode, metadata: {nonce: paymentNonce}},
+        {request},
     );
     if (result.addPaymentToOrder.__typename === 'Order') {
       return redirect(
-        `/checkout/confirmation/${result.addPaymentToOrder.code}`,
+          `/checkout/confirmation/${result.addPaymentToOrder.code}`,
       );
     } else {
       throw new Response('Not Found', {
@@ -126,18 +145,21 @@ export default function CheckoutPayment() {
     stripeError,
     brainTreeKey,
     brainTreeError,
+    paypalKey,
+    paypalError,
     error,
   } = useLoaderData<typeof loader>();
-  const { activeOrderFetcher, activeOrder } = useOutletContext<OutletContext>();
+  const {activeOrderFetcher, activeOrder} = useOutletContext<OutletContext>();
 
   const paymentError = getPaymentError(error);
 
   return (
-    <div className="flex flex-col items-center divide-gray-200 divide-y">
-      {eligiblePaymentMethods.map((paymentMethod) =>
+      <div className="flex flex-col items-center divide-gray-200 divide-y">
+        {eligiblePaymentMethods.map((paymentMethod: { code: string | string[]; id: Key | null | undefined; }) =>
         paymentMethod.code.includes('braintree') ? (
           <div className="py-3 w-full" key={paymentMethod.id}>
-            {brainTreeError ? (
+            {
+              brainTreeError ? (
               <div>
                 <p className="text-red-700 font-bold">Braintree error:</p>
                 <p className="text-sm">{brainTreeError}</p>
@@ -168,19 +190,26 @@ export default function CheckoutPayment() {
               ></StripePayments>
             )}
           </div>
-        ) : (
+        ) :
+            paymentMethod.code.includes('paypal') ?(
+            <div className="py-3 w-full" key={paymentMethod.id}>
+              {paypalError ? (
+                  <div>
+                    <p className="text-red-700 font-bold">Paypal error:</p>
+                    <p className="text-sm">{paypalError}</p>
+                  </div>
+              ) : (
+
+                  <CheckoutPaypal fullAmount={activeOrder?.totalWithTax ?? 0 } />
+              )}
+            </div>
+            ) : (
           <div className="py-12" key={paymentMethod.id}>
-            <DummyPayments
-              paymentMethod={paymentMethod}
-              paymentError={paymentError}
-            />
+            {/*<CheckoutPaypal />*/}
           </div>
         ),
       )}
 
-      <div className="py-12" key={"pp"}>
-        <CheckoutPaypal />
-      </div>
     </div>
   );
 }

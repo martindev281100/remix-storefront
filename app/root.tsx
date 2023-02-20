@@ -103,13 +103,14 @@ export default function App() {
   }, [loaderData]);
 
   const paypalConfig:  PayPalScriptOptions = {
-    "client-id": "YOUR-CLIENT-ID-HERE",
+    "client-id": "ARUERe0HuoQ4DOR9K7AlI4zM6Poxqr1HCRFj7SieXTWDIxsm31gwh-wo2Zey-SvJk1fg09WLnsVAT1m5",
     currency: "USD",
     intent: "capture",
   }
 
 
   return (
+      <PayPalScriptProvider options={paypalConfig}>
     <html lang="en" id="app">
       <head>
         <meta charSet="utf-8" />
@@ -124,7 +125,7 @@ export default function App() {
           cartQuantity={activeOrder?.totalQuantity ?? 0}
         />
         <main className="">
-          <PayPalScriptProvider options={paypalConfig}>
+
 
           <Outlet
             context={{
@@ -134,7 +135,7 @@ export default function App() {
               removeItem,
             }}
           />
-          </PayPalScriptProvider>
+
 
         </main>
         <CartTray
@@ -151,5 +152,6 @@ export default function App() {
         {devMode && <LiveReload />}
       </body>
     </html>
+      </PayPalScriptProvider>
   );
 }
